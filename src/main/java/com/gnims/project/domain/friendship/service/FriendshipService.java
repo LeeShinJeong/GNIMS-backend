@@ -5,6 +5,8 @@ import com.gnims.project.domain.friendship.dto.FollowReadResponse;
 import com.gnims.project.domain.friendship.entity.FollowStatus;
 import com.gnims.project.domain.friendship.entity.Friendship;
 import com.gnims.project.domain.friendship.repository.FriendshipRepository;
+import com.gnims.project.domain.notification.entity.NotificationType;
+import com.gnims.project.domain.notification.service.NotificationService;
 import com.gnims.project.domain.user.entity.User;
 import com.gnims.project.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +28,8 @@ public class FriendshipService {
 
     private final FriendshipRepository friendshipRepository;
     private final UserRepository userRepository;
+
+    private final NotificationService notificationService;
 
     public List<FollowReadResponse> readFollowing(Long myselfId) {
         List<Friendship> follows = friendshipRepository.readAllFollowingOf(myselfId);
@@ -98,6 +102,9 @@ public class FriendshipService {
             User user = userRepository.findById(followingId).orElseThrow(() -> new IllegalArgumentException(NOT_EXISTED_USER));
             User myself = userRepository.findById(myselfId).get();
             Friendship friendship = friendshipRepository.save(new Friendship(myself, user));
+            String content = myself.getUsername()+"님이 팔로우합니다!";
+            String Url = "http://localhost:8080";
+            notificationService.send(friendship.getFollow(), NotificationType.FOLLOW,content,Url);
             return new FriendshipResponse(friendship.receiveFollowId(), friendship.getStatus());
         }
 

@@ -1,38 +1,68 @@
 package com.gnims.project.domain.notification.entity;
 
+import com.gnims.project.domain.user.entity.User;
 import com.gnims.project.share.persistence.superclass.TimeStamped;
-import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import javax.persistence.*;
 
-@Getter
-@Entity
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Notification extends TimeStamped {
 
-    @Id
-    @Column(name = "notification_id")
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Getter
+    @Entity
+    @NoArgsConstructor
+    public class Notification extends TimeStamped {
 
-    private String senderName;
+        @Id
+        @GeneratedValue(strategy = GenerationType.IDENTITY)
+        @Column(name = "notification_id")
+        private Long id;
 
-    private String message;
+        @Embedded
+        private NotificationContent content;
+        //알림 내용 - 50자 이내
 
-    private boolean isChecked;
+        @Embedded
+        private RelatedURL url;
+        //관련 링크 - 클릭 시 이동해야할 링크
 
-    private Long accepterId;
+        @Column(nullable = false)
+        private Boolean isRead;
+        //읽었는지에 대한 여부
 
-    public Notification(String senderName, String message, Long accepterId) {
-        this.senderName = senderName;
-        this.message = message;
-        this.accepterId = accepterId;
-        this.isChecked = false;
+        @Enumerated(EnumType.STRING)
+        @Column(nullable = false)
+        private NotificationType notificationType;
+        // 알림 종류 [신청 / 수락 / 거절 등등 ]
+
+        @ManyToOne(fetch = FetchType.LAZY)
+        @OnDelete(action= OnDeleteAction.CASCADE)
+        @JoinColumn(name = "user_id")
+        private User receiver;
+        //회원정보
+
+        @Builder
+        public Notification(User receiver, NotificationType notificationType, String content, String url, Boolean isRead) {
+            this.receiver = receiver;
+            this.notificationType = notificationType;
+            this.content = new NotificationContent(content);
+            this.url = new RelatedURL(url);
+            this.isRead = isRead;
+        }
+
+        public void read() {
+            isRead = true;
+        }
+
+        public String getContent() {
+            return content.getContent();
+        }
+
+        public String getUrl() {
+            return url.getUrl();
+        }
+
     }
-
-    public void changeIsChecked(boolean checked) {
-        this.isChecked = checked;
-    }
-}
