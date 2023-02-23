@@ -1,5 +1,6 @@
 package com.gnims.project.domain.notification.controller;
 
+import com.gnims.project.domain.friendship.dto.FollowReadResponse;
 import com.gnims.project.domain.notification.entity.Notification;
 import com.gnims.project.domain.notification.service.NotificationService;
 import com.gnims.project.domain.notification.repository.SseEmitterManager;
@@ -26,7 +27,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Transactional
 public class NotificationController {
-
+    private final UserDetailsImpl userDetails;
     private final SseEmitterManager sseEmitterManager;
     private final NotificationService notificationService;
 
@@ -43,10 +44,12 @@ public class NotificationController {
      */
     @Async
     @EventListener
-    public void helloPush(ScheduleServiceForm form) {
+    public void helloPush(ScheduleServiceForm form, FollowReadResponse follow) {
         log.info("이벤트 리스너의 살기 감지!");
         List<Long> participantsIds = form.getParticipantsId();
         sendScheduleAlarm(form, participantsIds);
+        Long followId = follow.getFollowId();
+        sendFollowAlarm(follow, followId);
     }
 
 
@@ -75,5 +78,29 @@ public class NotificationController {
             }
         }
     }
-}
+
+    private void sendFollowAlarm(FollowReadResponse follow, Long followId) {
+        SseEmitter sseEmitter = new SseEmitter();
+        sseEmitter = sseEmitter.get(followId);
+            try {
+                log.info("이벤트 리스너 {}", follow.getFollowId());
+
+                String message = follow.getUsername() + "님께서 팔로우 하셨습니다.";
+
+                Notification notification = notificationService.create(userDetails.getUser().getId(), followId, message);
+
+                sseEmitter.send(SseEmitter.event()
+                        .name("follow")
+                        .data(notification, MediaType.APPLICATION_JSON));
+
+            } catch (IOException e) {
+                log.info("IO exception");
+            } catch (NullPointerException e) {
+                log.info("현재 {} 사용자는 알람을 사용하고 있지 않습니다.", followId);
+            } catch (IllegalStateException e) {
+                log.info("현재 {} 사용자의 Emitter는 꺼져있습니다.", followId);
+            }
+        }
+    }
+
 

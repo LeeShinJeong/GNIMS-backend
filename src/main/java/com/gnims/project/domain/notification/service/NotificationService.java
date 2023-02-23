@@ -19,4 +19,6 @@ public class NotificationService {
         Notification notification = new Notification(accepter.getUsername(), message, senderId);
         return notificationRepository.save(notification);
     }
+
+
 }
